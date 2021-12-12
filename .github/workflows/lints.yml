@@ -1,0 +1,31 @@
+name: Lints
+
+on: [push, pull_request]
+
+defaults:
+    run:
+        shell: bash
+
+env:
+    CI: true
+    FORCE_COLOR: 2
+
+jobs:
+    lints:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions/setup-node@v2
+            - uses: cachix/install-nix-action@v13
+            - uses: cachix/cachix-action@v10
+              with:
+                name: dapp
+
+            - name: Install dependencies
+              id: make-dependencies
+              run: nix-shell --run 'make'
+
+            - name: Check contracts are linted
+              id: lint-check
+              run: yarn lint:check
