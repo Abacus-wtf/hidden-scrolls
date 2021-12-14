@@ -29,5 +29,4 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 /// @dev ASCII Text generated with https://patorjk.com/software/taag/#p=display&f=Delta%20Corps%20Priest%201&t=Scroll
 contract HiddenScroll is ERC721("") {
 
-  
 }
