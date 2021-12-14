@@ -5,7 +5,7 @@ import {Auth} from "solmate/Auth.sol";
 import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
 
 import {HiddenScroll} from "./HiddenScroll.sol";
-import {Alchemists} from "./Alchemists.sol";
+import {Lords} from "./Lords.sol";
 
 /// @title Folklore Book
 /// @author abigger87
@@ -15,19 +15,19 @@ contract FolkloreBook is Auth {
     using Bytes32AddressLib for bytes32;
 
     /// @notice The Hidden Scrolls NFT Contract
-    /// @dev The folkore rendered in the book 
+    /// @dev The folkore rendered in the book
     HiddenScroll public immutable HIDDEN_SCROLLS;
 
-    /// @notice The Alchemists NFT Contract
-    /// @dev Alchemists are erc721s awarded for creating lore
-    Alchemists public immutable ALCHEMISTS;
+    /// @notice The Lords NFT Contract
+    /// @dev Lords are erc721s awarded for creating lore
+    Lords public immutable LORDS;
 
     /// @dev The primary lore object
     struct Lore {
-      address creator;        // The Creator of the lore
-      bool nsfw;              // NSFW Flag
-      bool included;          // Was the Lore included in the book
-      string loreMetadataURI; // The encoded metadata uri
+        address creator; // The Creator of the lore
+        bool nsfw; // NSFW Flag
+        bool included; // Was the Lore included in the book
+        string loreMetadataURI; // The encoded metadata uri
     }
 
     /// @notice Status of the contract
@@ -64,54 +64,52 @@ contract FolkloreBook is Auth {
     /// @param _owner The owner of the book.
     /// @param _authority The Book Authority.
     /// @param _HIDDEN_SCROLLS The HiddenScrolls contract address
-    /// @param _ALCHEMISTS The Alchemists contract address
+    /// @param _LORDS The Lords contract address
     constructor(
-      address _owner,
-      Authority _authority,
-      address _HIDDEN_SCROLLS,
-      address _ALCHEMISTS
-    )
-      Auth(_owner, _authority)
-    {
-      HIDDEN_SCROLLS = HiddenScroll(_HIDDEN_SCROLLS);
-      ALCHEMISTS = Alchemists(_ALCHEMISTS);
+        address _owner,
+        Authority _authority,
+        address _HIDDEN_SCROLLS,
+        address _LORDS
+    ) Auth(_owner, _authority) {
+        HIDDEN_SCROLLS = HiddenScroll(_HIDDEN_SCROLLS);
+        LORDS = Lords(_LORDS);
     }
 
-  /// @notice Emitted when new Folklore is submitted
-  /// @param sender The address that submitted the lore
-  event NewFolklore(address indexed sender, uint256 indexed loreId);
+    /// @notice Emitted when new Folklore is submitted
+    /// @param sender The address that submitted the lore
+    event NewFolklore(address indexed sender, uint256 indexed loreId);
 
-  /// @notice Submits new lore for the current session
-  function submitLore(string metadata, bool nsfw) external {
-    // TODO: make sure the session is active (it will always be - we immediately roll over)
+    /// @notice Submits new lore for the current session
+    function submitLore(string metadata, bool nsfw) external {
+        // TODO: make sure the session is active (it will always be - we immediately roll over)
 
-    uint256 currentLore = loreCount;
-    loreCount += 1;
+        uint256 currentLore = loreCount;
+        loreCount += 1;
 
-    // Create the new lore
-    loreStore[currentLore] = Lore(msg.sender, nsfw, false, metadata);
+        // Create the new lore
+        loreStore[currentLore] = Lore(msg.sender, nsfw, false, metadata);
 
-    emit NewFolklore(msg.sender, currentLore);
-  }
+        emit NewFolklore(msg.sender, currentLore);
+    }
 
-  // TODO: set vote
+    // TODO: set vote
 
-  // TODO: update vote
+    // TODO: update vote
 
-  ///////////////////////////////////////////////
-  //                ADMIN ZONE                 //
-  ///////////////////////////////////////////////
+    ///////////////////////////////////////////////
+    //                ADMIN ZONE                 //
+    ///////////////////////////////////////////////
 
-  /// @notice Emitted when the session status is changed
-  /// @param sender The Authorized user changing the session status
-  /// @param status The new Session Status
-  event SessionStatusUpdate(address indexed sender, bool status);
+    /// @notice Emitted when the session status is changed
+    /// @param sender The Authorized user changing the session status
+    /// @param status The new Session Status
+    event SessionStatusUpdate(address indexed sender, bool status);
 
-  /// @notice Flips the session status
-  /// @return sessionStatus as a boolean
-  function setSessionStatus() external requiresAuth returns (bool) {
-    // TODO: this doesn't need 8 bits, let's just use 1
-    sessionStatus = !sessionStatus;
-    return sessionStatus;
-  }
+    /// @notice Flips the session status
+    /// @return sessionStatus as a boolean
+    function setSessionStatus() external requiresAuth returns (bool) {
+        // TODO: this doesn't need 8 bits, let's just use 1
+        sessionStatus = !sessionStatus;
+        return sessionStatus;
+    }
 }

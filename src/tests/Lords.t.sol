@@ -3,13 +3,13 @@ pragma solidity ^0.8.6;
 
 import "ds-test/test.sol";
 
-import "../FolkloreBook.sol";
+import "../Lords.sol";
 
-contract FolkloreBookTest is DSTest {
-    FolkloreBook book;
+contract LordsTest is DSTest {
+    Lords lords;
 
     function setUp() public {
-        book = new FolkloreBook();
+        lords = new Lords();
     }
 
     function testFail_basic_sanity() public {
