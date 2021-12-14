@@ -4,77 +4,114 @@ pragma solidity 0.8.10;
 import {Auth} from "solmate/Auth.sol";
 import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
 
+import {HiddenScroll} from "./HiddenScroll.sol";
+import {Alchemists} from "./Alchemists.sol";
+
 /// @title Folklore Book
 /// @author abigger87
-/// @notice Refactored logic to 
+/// @notice The main book containing and creating lore
 contract FolkloreBook is Auth {
     using Bytes32AddressLib for address;
     using Bytes32AddressLib for bytes32;
 
+    /// @notice The Hidden Scrolls NFT Contract
+    /// @dev The folkore rendered in the book 
+    HiddenScroll public immutable HIDDEN_SCROLLS;
+
+    /// @notice The Alchemists NFT Contract
+    /// @dev Alchemists are erc721s awarded for creating lore
+    Alchemists public immutable ALCHEMISTS;
+
+    /// @dev The primary lore object
+    struct Lore {
+      address creator;        // The Creator of the lore
+      bool nsfw;              // NSFW Flag
+      bool included;          // Was the Lore included in the book
+      string loreMetadataURI; // The encoded metadata uri
+    }
+
+    /// @notice Status of the contract
+    /// @dev Only mutable by a give Authority
+    /// @dev initializing wastes gas, coalesce default 0x0 to false
+    bool public sessionStatus;
+
+    /// @dev A lore vote requires the user to be an appraisooor
+    /// @dev Eventually, we can require appraisooor | ABC hodler
+    /// @dev Maps pricing session version to PricingSession
+    mapping(uint256 => PricingSession) public pricingSessions;
+
+    /// @notice The current lore book page number
+    uint256 public page;
+
+    /// @notice Mapping from page number to the loreStore index
+    mapping(uint256 => uint256) public book;
+
+    /// @dev The current index of stored lore
+    uint256 internal loreCount;
+
+    /// @dev maps a potential lore id to the lore Object
+    mapping(uint256 => Lore) internal loreStore;
+
+    /// @dev Mapping from lore id to a mapping of potential lore
+    /// @dev Example: to get first lore session's first submitted lore: loreStore[loreSession[0][0]]
+    //      loreId             index      loreStore_index
+    mapping(uint256 => mapping(uint256 => uint256)) internal loreSession;
+
+    /// @dev Maps lore to user to their vote
+    mapping(uint256 => mapping(address => uint256)) internal userVotes;
+
     /// @notice Creates a Folklore Book.
     /// @param _owner The owner of the book.
     /// @param _authority The Book Authority.
-    constructor(address _owner, Authority _authority) Auth(_owner, _authority) {}
-
-    /// @notice Emitted when a new Vault is deployed.
-    /// @param vault The newly deployed Vault contract.
-    /// @param underlying The underlying token the new Vault accepts.
-    event LoreAdded(Vault vault, ERC20 underlying);
-
-    /// @notice Deploys a new Vault which supports a specific underlying token.
-    /// @dev This will revert if a Vault that accepts the same underlying token has already been deployed.
-    /// @param underlying The ERC20 token that the Vault should accept.
-    /// @return vault The newly deployed Vault contract which accepts the provided underlying token.
-    function deployVault(ERC20 underlying) external returns (Vault vault) {
-        // Use the CREATE2 opcode to deploy a new Vault contract.
-        // This will revert if a Vault which accepts this underlying token has already
-        // been deployed, as the salt would be the same and we can't deploy with it twice.
-        vault = new Vault{salt: address(underlying).fillLast12Bytes()}(underlying);
-
-        emit VaultDeployed(vault, underlying);
+    /// @param _HIDDEN_SCROLLS The HiddenScrolls contract address
+    /// @param _ALCHEMISTS The Alchemists contract address
+    constructor(
+      address _owner,
+      Authority _authority,
+      address _HIDDEN_SCROLLS,
+      address _ALCHEMISTS
+    )
+      Auth(_owner, _authority)
+    {
+      HIDDEN_SCROLLS = HiddenScroll(_HIDDEN_SCROLLS);
+      ALCHEMISTS = Alchemists(_ALCHEMISTS);
     }
 
-    /*///////////////////////////////////////////////////////////////
-                            VAULT LOOKUP LOGIC
-    //////////////////////////////////////////////////////////////*/
+  /// @notice Emitted when new Folklore is submitted
+  /// @param sender The address that submitted the lore
+  event NewFolklore(address indexed sender, uint256 indexed loreId);
 
-    /// @notice Computes a Vault's address from its accepted underlying token.
-    /// @param underlying The ERC20 token that the Vault should accept.
-    /// @return The address of a Vault which accepts the provided underlying token.
-    /// @dev The Vault returned may not be deployed yet. Use isVaultDeployed to check.
-    function getVaultFromUnderlying(ERC20 underlying) external view returns (Vault) {
-        return
-            Vault(
-                payable(
-                    keccak256(
-                        abi.encodePacked(
-                            // Prefix:
-                            bytes1(0xFF),
-                            // Creator:
-                            address(this),
-                            // Salt:
-                            address(underlying).fillLast12Bytes(),
-                            // Bytecode hash:
-                            keccak256(
-                                abi.encodePacked(
-                                    // Deployment bytecode:
-                                    type(Vault).creationCode,
-                                    // Constructor arguments:
-                                    abi.encode(underlying)
-                                )
-                            )
-                        )
-                    ).fromLast20Bytes() // Convert the CREATE2 hash into an address.
-                )
-            );
-    }
+  /// @notice Submits new lore for the current session
+  function submitLore(string metadata, bool nsfw) external {
+    // TODO: make sure the session is active (it will always be - we immediately roll over)
 
-    /// @notice Returns if a Vault at an address has already been deployed.
-    /// @param vault The address of a Vault which may not have been deployed yet.
-    /// @return A boolean indicating whether the Vault has been deployed already.
-    /// @dev This function is useful to check the return values of getVaultFromUnderlying,
-    /// as it does not check that the Vault addresses it computes have been deployed yet.
-    function isVaultDeployed(Vault vault) external view returns (bool) {
-        return address(vault).code.length > 0;
-    }
+    uint256 currentLore = loreCount;
+    loreCount += 1;
+
+    // Create the new lore
+    loreStore[currentLore] = Lore(msg.sender, nsfw, false, metadata);
+
+    emit NewFolklore(msg.sender, currentLore);
+  }
+
+  // TODO: set vote
+
+  // TODO: update vote
+
+  ///////////////////////////////////////////////
+  //                ADMIN ZONE                 //
+  ///////////////////////////////////////////////
+
+  /// @notice Emitted when the session status is changed
+  /// @param sender The Authorized user changing the session status
+  /// @param status The new Session Status
+  event SessionStatusUpdate(address indexed sender, bool status);
+
+  /// @notice Flips the session status
+  /// @return sessionStatus as a boolean
+  function setSessionStatus() external requiresAuth returns (bool) {
+    // TODO: this doesn't need 8 bits, let's just use 1
+    sessionStatus = !sessionStatus;
+    return sessionStatus;
+  }
 }
