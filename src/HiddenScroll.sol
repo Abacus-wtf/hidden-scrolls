@@ -28,15 +28,43 @@ pragma solidity ^0.8.10;
 ///////////////////////////////////////////////////////////////////
 */
 
-// NFT contract to inherit from.
-/// @dev Waiting for solmate ERC721 impl
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+/// Note: Waiting for solmate ERC721 impl
+import {ERC721} from "zeppelin-solidity/token/ERC721/ERC721.sol";
 
 /// @title HiddenScroll
 /// @author abigger87
 /// @dev This contract is a folklore instance deployed by the [FolkloreBook](./FolkloreBook.sol) contract.
 /// @dev ASCII Text generated with https://patorjk.com/software/taag/#p=display&f=Delta%20Corps%20Priest%201&t=Scroll
-contract HiddenScroll is ERC721("") {
+contract HiddenScroll is ERC721("Hidden Scroll", "aSCROLL") {
+
+  function baseURI() public view returns (string memory) {
+        return _baseURI();
+    }
+
+    function exists(uint256 tokenId) public view returns (bool) {
+        return _exists(tokenId);
+    }
+
+    function mint(address to, uint256 tokenId) public {
+        _mint(to, tokenId);
+    }
+
+    function safeMint(address to, uint256 tokenId) public {
+        _safeMint(to, tokenId);
+    }
+
+    function safeMint(
+        address to,
+        uint256 tokenId,
+        bytes memory _data
+    ) public {
+        _safeMint(to, tokenId, _data);
+    }
+
+    function burn(uint256 tokenId) public {
+        _burn(tokenId);
+    }
+    
     /// @notice Mints the Hidden Scroll
     /// @param _index The token index to mint
     function mint(uint256 _index) external payable {

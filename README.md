@@ -29,6 +29,15 @@ cd hidden-scrolls
 make
 ```
 
+### Notes
+
+Until [solmate](https://github.com/Rari-Capital/solmate) has native ERC721 support, we use Open Zeppelin's ERC721 implementation. This requires us to workaround the differing source directory name `contracts` instead of Dapptool's expected `src`. To do this we can run:
+
+```bash
+ln -s contracts lib/zeppelin-solidity/src
+echo /src >>.git/modules/lib/zeppelin-solidity/info/exclude
+```
+
 ### Run Tests
 
 ```sh
