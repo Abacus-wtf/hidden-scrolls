@@ -41,7 +41,14 @@ contract HiddenScroll is ERC721("Hidden Scroll", "aSCROLL"), MintAuthority {
   uint256 internal currTokenId;
 
   /// @dev the base svg as a string
-  string constant BASE_SVG = "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 350 350'><style>.base { fill: white; font-family: serif; font-size: 24px; }</style><rect width='100%' height='100%' fill='black' />";
+  string constant BASE_SVG = "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 350 350'>"
+                              "<defs><pattern id='imgpattern' x='0' y='0' width='1' height='1'>"
+                                "<image width='350' height='350' href='https://lh3.googleusercontent.com/proxy/m1seWtOYFyO7PKJTJZdvtvKh97PjWiPVxeiXfPjYsz-LgyOfdEOB2Tl5qEUUJWgS-CjqBgnz898DQOI-tOTFUERLA6b6ynd6'/>"
+                              "</pattern></defs>"
+                              "<style>"
+                                ".base { fill: black; font-family: Brush Script MT, Brush Script Std, cursive; font-size: 10px; }"
+                              "</style>"
+                              "<rect width='100%' height='100%' fill='url(#imgpattern)' d='M 100,100 L 120,110 150,90 170,220 70,300 50,250 50,200 70,100 50,70 Z' />";
 
   constructor(
     address _mintAuthority

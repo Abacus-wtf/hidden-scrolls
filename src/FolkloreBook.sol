@@ -76,16 +76,29 @@ contract FolkloreBook is Auth {
     /// @dev The current index of stored lore
     uint256 internal loreCount;
 
+    /// @dev The number of lores submitted for the current session
+    uint256 internal sessionLoreCount;
+
+    /// @notice When the session ends
+    uint256 public sessionEnd;
+
+    /// @notice The length of a session
+    uint256 public sessionLength;
+
     /// @dev maps a potential lore id to the lore Object
-    mapping(uint256 => Lore) internal loreStore;
+    mapping(uint256 => Lore) public loreStore;
 
     /// @dev Mapping from lore id to a mapping of potential lore
     /// @dev Example: to get first lore session's first submitted lore: loreStore[loreSession[0][0]]
     //      loreId             index      loreStore_index
     mapping(uint256 => mapping(uint256 => uint256)) internal loreSession;
 
-    /// @dev Maps lore to user to their vote
-    mapping(uint256 => mapping(address => uint256)) internal userVotes;
+    /// @dev Maps lore index to number of votes
+    mapping(uint256 => uint256) internal votes;
+
+    /// @dev maps page to user to their vote
+    /// @dev will be 0 if they haven't voted
+    mapping(uint256 => mapping(address => uint256)) userVote;
 
     /// @notice Creates a Folklore Book.
     /// @param _owner The owner of the book.
@@ -100,6 +113,9 @@ contract FolkloreBook is Auth {
     ) Auth(_owner, _authority) {
         HIDDEN_SCROLLS = HiddenScroll(_HIDDEN_SCROLLS);
         LORDS = Lords(_LORDS);
+
+        // Initialize loreCount to 1 since we leave 0 empty
+        loreCount = 1;
     }
 
     /// @notice Emitted when new Folklore is submitted
@@ -112,6 +128,7 @@ contract FolkloreBook is Auth {
 
         uint256 currentLore = loreCount;
         loreCount += 1;
+        sessionLoreCount += 1;
 
         // Create the new lore
         loreStore[currentLore] = Lore(msg.sender, nsfw, false, metadata);
@@ -119,9 +136,82 @@ contract FolkloreBook is Auth {
         emit NewFolklore(msg.sender, currentLore);
     }
 
-    // TODO: set vote
+    /// @notice Emitted when a user votes
+    /// @param sender The msg sender who submitted the vote
+    /// @param loreId The id of the lore they voted for
+    event VoteCasted(address indexed sender, uint256 indexed loreId);
 
-    // TODO: update vote
+    /// @notice Casts a user's vote
+    /// @param loreId The id of the lore in the current session
+    function vote(uint256 loreId) external inSessionBounds(loreId) uniqueVote {
+        if(!weigh()) {
+            votes[loreId] += 1;
+            userVote[page+1][msg.sender] = loreId;
+            emit VoteCasted(msg.sender, loreId);
+        }
+    }
+
+    /// @notice Emitted when a user updates their vote
+    /// @param sender The msg sender who submitted the vote
+    /// @param oldLoreId The id of the lore they previously voted for
+    /// @param newLoreId The id of the lore they now voted for
+    event VoteUpdated(address indexed sender, uint256 indexed oldLoreId, uint256 indexed newLoreId);
+
+    /// @notice Updates a user's vote
+    /// @param loreId The id of the lore in the current session
+    function updateVote(uint256 loreId) external inSessionBounds(loreId) {
+        uint256 oldVote = userVote[page+1][msg.sender];
+        if (oldVote != 0) {
+            votes[oldVote] -= 1;
+        }
+        votes[loreId] += 1;
+        userVote[page+1][msg.sender] = loreId;
+        emit VoteUpdated(msg.sender, oldVote, loreId);
+    }
+
+    /// @notice Emitted when lore inked
+    /// @param sender The msg sender who inked the lore
+    /// @param loreId The id of the inked lore
+    event LoreInked(address indexed sender, uint256 indexed loreId);
+
+    /// @notice Weighs and inks lore
+    /// @return If the lore was inked
+    function weigh() public returns(bool) {
+        if(block.timestamp > sessionEnd) {
+            uint256 winningLore = loreSession[page+1][0];
+            for(uint256 i = 1; i <= sessionLoreCount; i++) {
+                if votes[loreSession[page+1][i]] > votes[winningLore] {
+                    winningLore = loreSession[page+1][i];
+                }
+            }
+
+            book[page+1] = winningLore; // Set the book page
+            sessionLoreCount = 0;       // Reset the session
+            page += 1;                  // Next page
+
+            // Set the new session end
+            sessionEnd = block.timestamp + sessionLength;
+            emit LoreInked(msg.sender, winningLore);
+            return true;
+        }
+        return false;
+    }
+
+    // TODO: we can have lore inked permissionlessly by recording the block.timestamp
+    // TODO: if block.timestamp > sessionEnd for any function call, weigh()
+
+    ///////////////////////////////////////////////
+    //              ACCESSIBILITY                //
+    ///////////////////////////////////////////////
+
+    /// @notice Gets the Lore Ids for 
+    /// @param session The session number
+    function getLoreIds(uint256 session) external view validSession(session) returns(uint256[] memory ids) {
+        for(uint256 i = 0; i < sessionLoreCount; i++) {
+            ids[i] = loreSession[session][i];
+        }
+    }
+
 
     ///////////////////////////////////////////////
     //                ADMIN ZONE                 //
@@ -130,13 +220,48 @@ contract FolkloreBook is Auth {
     /// @notice Emitted when the session status is changed
     /// @param sender The Authorized user changing the session status
     /// @param status The new Session Status
-    event SessionStatusUpdate(address indexed sender, bool status);
+    event SessionStatusUpdated(address indexed sender, bool status);
 
     /// @notice Flips the session status
     /// @return sessionStatus as a boolean
     function setSessionStatus() external requiresAuth returns (bool) {
         // TODO: this doesn't need 8 bits, let's just use 1
         sessionStatus = !sessionStatus;
+        emit SessionStatusUpdated(msg.sender, sessionStatus);
         return sessionStatus;
+    }
+
+    /// @notice Emitted when the session length is changed
+    /// @param sender The Authorized user changing the session length
+    /// @param length The new Session Length
+    event SessionLengthUpdated(address indexed sender, uint256 length);
+
+    /// @notice Sets the session length
+    /// @param newSessionLength The new session length
+    function setSessionStatus(uint256 newSessionLength) external requiresAuth {
+        sessionLength = newSessionLength;
+        emit SessionLengthUpdated(msg.sender, sessionLength);
+    }
+
+    ///////////////////////////////////////////////
+    //                 MODIFIERS                 //
+    ///////////////////////////////////////////////
+
+    modifier inSessionBounds(uint256 id) {
+        uint256 lower_bounds = loreSession[page+1][0];
+        uint256 upper_bounds = loreSession[page+1][sessionLoreCount];
+        require(id >= lower_bounds, "INVALID_ID");
+        require(id <= upper_bounds, "INVALID_ID");
+        _;
+    }
+
+    modifier uniqueVote() {
+        require(!(userVote[page+1][msg.sender] > 0), "ALREADY_VOTED");
+        _;
+    }
+
+    modifier validSession(uint256 session) {
+        require(session <= page+1 && session >= 0, "INVALID_SESSION");
+        _;
     }
 }
