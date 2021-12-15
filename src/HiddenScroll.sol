@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.10;
 
-/*
-///////////////////////////////////////////////////////////////////
+/*//////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
 
    ▄█    █▄     ▄█  ████████▄  ████████▄     ▄████████ ███▄▄▄▄   
@@ -25,80 +24,104 @@ pragma solidity ^0.8.10;
                           ███    ███            ▀         ▀       
 
 ///////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////
-*/
+/////////////////////////////////////////////////////////////////*/
 
 /// Note: Waiting for solmate ERC721 impl
 import {ERC721} from "zeppelin-solidity/token/ERC721/ERC721.sol";
+
+import {MintAuthority} from "./MintAuthority.sol";
 
 /// @title HiddenScroll
 /// @author abigger87
 /// @dev This contract is a folklore instance deployed by the [FolkloreBook](./FolkloreBook.sol) contract.
 /// @dev ASCII Text generated with https://patorjk.com/software/taag/#p=display&f=Delta%20Corps%20Priest%201&t=Scroll
-contract HiddenScroll is ERC721("Hidden Scroll", "aSCROLL") {
+contract HiddenScroll is ERC721("Hidden Scroll", "aSCROLL"), MintAuthority {
+
+  /// @notice The current token ID
+  uint256 internal currTokenId;
+
+  /// @dev the base svg as a string
+  string constant BASE_SVG = "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 350 350'><style>.base { fill: white; font-family: serif; font-size: 24px; }</style><rect width='100%' height='100%' fill='black' />";
+
+  constructor(
+    address _mintAuthority
+  ) {
+    OWNER = msg.sender;
+    mintAuthority = _mintAuthority;
+  }
 
   function baseURI() public view returns (string memory) {
-        return _baseURI();
-    }
+      return _baseURI();
+  }
 
-    function exists(uint256 tokenId) public view returns (bool) {
-        return _exists(tokenId);
-    }
+  function exists(uint256 tokenId) public view returns (bool) {
+      return _exists(tokenId);
+  }
 
-    function mint(address to, uint256 tokenId) public {
-        _mint(to, tokenId);
-    }
+  ///////////////////////////////////////////////
+  //              MINTING LOGIC                //
+  ///////////////////////////////////////////////
 
-    function safeMint(address to, uint256 tokenId) public {
-        _safeMint(to, tokenId);
-    }
+  /// @notice Emitted when a Hidden Scroll is minted
+  /// @param tokenId The token id of the minted Hidden Scroll
+  /// @param book The address to which the Hidden Scroll is minted
+  event HiddenScrollMinted(uint256 indexed tokenId, address indexed book);
 
-    function safeMint(
-        address to,
-        uint256 tokenId,
-        bytes memory _data
-    ) public {
-        _safeMint(to, tokenId, _data);
-    }
+  /// @notice Mints the Hidden Scroll
+  /// @param book The address to mint the hidden scroll to
+  /// @param lore The text to write to the scroll
+  function mint(address book, string memory lore) external onlyMintAuthority {
+      uint256 newItemId = currTokenId;
+      string memory newItemString = Strings.toString(newItemId);
 
-    function burn(uint256 tokenId) public {
-        _burn(tokenId);
-    }
-    
-    /// @notice Mints the Hidden Scroll
-    /// @param _index The token index to mint
-    function mint(uint256 _index) external payable {
-        // CHECKS
-        healBoss(); // Try and heal boss first
-        require(msg.value >= price + developmentFee, "PRICE_NOT_MET");
-        require(_characterIndex < defaultCharacters.length, "CHARACTER_NON_EXISTANT");
+      string memory finalSvg = string(
+          abi.encodePacked(
+              BASE_SVG,
+              "<text class='base' margin='2px' x='4%' y='8%'>",
+              lore,
+              "</text></svg>"
+          )
+      );
 
-        // Get current tokenId (starts at 1 since we incremented in the constructor).
-        uint256 newItemId = _tokenIds.current();
+      string memory json = Base64.encode(
+          bytes(
+              string(
+                  abi.encodePacked(
+                      '{"name": "Hidden Scrolls ',
+                      newItemId,
+                      '", "description": "Lore Edition #',
+                      newItemId,
+                      ' of the Hidden Scrolls Collection", "image": "data:image/svg+xml;base64,',
+                      Base64.encode(bytes(finalSvg)),
+                      '"}'
+                  )
+              )
+          )
+      );
 
-        // The magical function! Assigns the tokenId to the caller's wallet address.
-        _safeMint(msg.sender, newItemId);
+      string memory finalTokenUri = string(
+          abi.encodePacked("data:application/json;base64,", json)
+      );
 
-        // Try to send fee to developooor
-        payable(developer).call{value: developmentFee}("");
+      _safeMint(book, newItemId);
 
-        // We map the tokenId => their character attributes. More on this in
-        // the lesson below.
-        nftHolderAttributes[newItemId] = CharacterAttributes({
-            characterIndex: _characterIndex,
-            name: defaultCharacters[_characterIndex].name,
-            imageURI: defaultCharacters[_characterIndex].imageURI,
-            hp: defaultCharacters[_characterIndex].hp,
-            maxHp: defaultCharacters[_characterIndex].hp,
-            attackDamage: defaultCharacters[_characterIndex].attackDamage
-        });
+      _setTokenURI(newItemId, finalTokenUri);
 
-        // Keep an easy way to see who owns what NFT.
-        loreHolders[msg.sender] = newItemId;
+      currTokenId += 1;
 
-        // Increment the tokenId for the next person that uses it.
-        _tokenIds.increment();
+      emit HiddenScrollMinted(newItemId, book);
+  }
 
-        emit CharacterNFTMinted(newItemId, msg.sender, _characterIndex);
-    }
+  /// @notice Emitted when a Hidden Scroll is burned
+  /// @param tokenId The Hidden Scroll token id
+  /// @param caller The address that initiated the burn
+  event HiddenScrollBurned(uint256 indexed tokenId, address indexed caller);
+
+  /// @notice Burns a Hidden Scroll
+  /// @param tokenId The Token ID to burn
+  function burn(uint256 tokenId) external onlyMintAuthority {
+      _burn(tokenId);
+
+      emit HiddenScrollBurned(tokenId, msg.sender);
+  }
 }
