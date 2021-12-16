@@ -191,12 +191,21 @@ contract FolkloreBook is Auth {
                 }
             }
 
+            // Set the new session end
+            sessionEnd = block.timestamp + sessionLength;
+
             book[page+1] = winningLore; // Set the book page
             sessionLoreCount = 0;       // Reset the session
             page += 1;                  // Next page
 
-            // Set the new session end
-            sessionEnd = block.timestamp + sessionLength;
+            loreStore[winningLore].included = true;
+            address creator = loreStore[winningLore].creator;
+            bool nsfw = loreStore[winningLore].nsfw;
+            string memory metadata = loreStore[winningLore].metadata;
+
+            HIDDEN_SCROLLS.mint(address(this), metadata, nsfw);
+            MASONS.mint(creator, metadata, page - 1);
+
             emit LoreInked(msg.sender, winningLore);
             return true;
         }
@@ -269,5 +278,23 @@ contract FolkloreBook is Auth {
     modifier validSession(uint256 session) {
         require(session <= page+1 && session >= 0, "INVALID_SESSION");
         _;
+    }
+
+    ///////////////////////////////////////////////
+    //          IERC721Receiver Support          //
+    ///////////////////////////////////////////////
+
+    event Received(address operator, address from, uint256 tokenId, bytes data, uint256 gas);
+
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes memory data
+    ) public returns (bytes4) {
+        emit Received(operator, from, tokenId, data, gasleft());
+        // Magic value that must be emitted on successful receiving
+        // `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`
+        return 0x150b7a02;
     }
 }

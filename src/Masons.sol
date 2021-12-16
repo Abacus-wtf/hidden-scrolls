@@ -58,9 +58,10 @@ contract Masons is ERC721URIStorage, MintAuthority {
   event HiddenScrollMinted(uint256 indexed tokenId, address indexed book);
 
   /// @notice Mints the Hidden Scroll
-  /// @param book The address to mint the hidden scroll to
+  /// @param creator The address to mint the mason to
   /// @param lore The text to write to the scroll
-  function mint(address book, string memory lore) external onlyMintAuthority {
+  /// @param page The page that the lore was included in
+  function mint(address creator, string memory lore, uint256 page) external onlyMintAuthority {
       uint256 newItemId = currTokenId;
 
       string memory finalSvg = string(
@@ -92,13 +93,13 @@ contract Masons is ERC721URIStorage, MintAuthority {
           abi.encodePacked("data:application/json;base64,", json)
       );
 
-      _safeMint(book, newItemId);
+      _safeMint(creator, newItemId);
 
       _setTokenURI(newItemId, finalTokenUri);
 
       currTokenId += 1;
 
-      emit HiddenScrollMinted(newItemId, book);
+      emit HiddenScrollMinted(newItemId, creator);
   }
 
   /// @notice Emitted when a Hidden Scroll is burned

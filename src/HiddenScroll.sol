@@ -77,7 +77,8 @@ contract HiddenScroll is ERC721URIStorage, MintAuthority {
   /// @notice Mints the Hidden Scroll
   /// @param book The address to mint the hidden scroll to
   /// @param lore The text to write to the scroll
-  function mint(address book, string memory lore) external onlyMintAuthority {
+  /// @param nsfw Whether the lore is NSFW
+  function mint(address book, string memory lore, bool nsfw) external onlyMintAuthority {
       uint256 newItemId = currTokenId;
 
       string memory finalSvg = string(
@@ -95,7 +96,9 @@ contract HiddenScroll is ERC721URIStorage, MintAuthority {
                   abi.encodePacked(
                       '{"name": "Hidden Scrolls ',
                       newItemId,
-                      '", "description": "Lore Edition #',
+                      '",',
+                      '"nsfw": "', nsfw, '",'
+                      '"description": "Lore Edition #',
                       newItemId,
                       ' of the Hidden Scrolls Collection", "image": "data:image/svg+xml;base64,',
                       Base64.encode(bytes(finalSvg)),

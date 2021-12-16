@@ -28,6 +28,10 @@ contract FolkloreBookTest is DSTestPlus {
             address(scroll),        // _HIDDEN_SCROLLS
             address(masons)         // _MASONS
         );
+
+        // Update the Masons and HiddenScroll mint authorities
+        scroll.set_mint_authority(address(book));
+        masons.set_mint_authority(address(book));
     }
 
     function testInitialization() public {
@@ -137,6 +141,7 @@ contract FolkloreBookTest is DSTestPlus {
     }
 
     function testWeighWithSession() public {
+        book.submitLore("", false);
         book.setSessionLength(uint256(2 days));
         assertTrue(!book.weigh());
         hevm.warp(block.timestamp + 1 days);
@@ -164,5 +169,23 @@ contract FolkloreBookTest is DSTestPlus {
         assertEq(book.sessionLength(), uint256(2 days));
         book.setSessionLength(uint256(3 days));
         assertEq(book.sessionLength(), uint256(3 days));
+    }
+
+    ///////////////////////////////////////////////
+    //          IERC721Receiver Support          //
+    ///////////////////////////////////////////////
+
+    event Received(address operator, address from, uint256 tokenId, bytes data, uint256 gas);
+
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes memory data
+    ) public returns (bytes4) {
+        emit Received(operator, from, tokenId, data, gasleft());
+        // Magic value that must be emitted on successful receiving
+        // `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`
+        return 0x150b7a02;
     }
 }
