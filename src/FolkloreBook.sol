@@ -5,7 +5,7 @@ import {Auth} from "solmate/Auth.sol";
 import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
 
 import {HiddenScroll} from "./HiddenScroll.sol";
-import {Lords} from "./Lords.sol";
+import {Masons} from "./Masons.sol";
 
 /*///////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -45,9 +45,9 @@ contract FolkloreBook is Auth {
     /// @dev The folkore rendered in the book
     HiddenScroll public immutable HIDDEN_SCROLLS;
 
-    /// @notice The Lords NFT Contract
-    /// @dev Lords are erc721s awarded for creating lore
-    Lords public immutable LORDS;
+    /// @notice The Masons NFT Contract
+    /// @dev Masons are erc721s awarded for creating lore
+    Masons public immutable MASONS;
 
     /// @dev The primary lore object
     struct Lore {
@@ -104,15 +104,15 @@ contract FolkloreBook is Auth {
     /// @param _owner The owner of the book.
     /// @param _authority The Book Authority.
     /// @param _HIDDEN_SCROLLS The HiddenScrolls contract address
-    /// @param _LORDS The Lords contract address
+    /// @param _MASONS The Masons contract address
     constructor(
         address _owner,
         Authority _authority,
         address _HIDDEN_SCROLLS,
-        address _LORDS
+        address _MASONS
     ) Auth(_owner, _authority) {
         HIDDEN_SCROLLS = HiddenScroll(_HIDDEN_SCROLLS);
-        LORDS = Lords(_LORDS);
+        MASONS = Masons(_MASONS);
 
         // Initialize loreCount to 1 since we leave 0 empty
         loreCount = 1;

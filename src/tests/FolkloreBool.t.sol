@@ -3,20 +3,33 @@ pragma solidity ^0.8.6;
 
 import "ds-test/test.sol";
 
-import "../FolkloreBook.sol";
+import {FolkloreBook} from "../FolkloreBook.sol";
+import {HiddenScroll} from "../HiddenScroll.sol";
+import {Masons} from "../Masons.sol";
 
 contract FolkloreBookTest is DSTest {
     FolkloreBook book;
+    HiddenScroll scroll;
+    Masons masons;
 
     function setUp() public {
-        book = new FolkloreBook();
+        scroll = new HiddenScroll(address(this));
+
+        masons = new Masons(address(this));
+
+        book = new FolkloreBook(
+            address(this),          // _owner
+            Authority(address(0)),  // _authority
+            address(scroll),        // _HIDDEN_SCROLLS
+            address(masons)         // _MASONS
+        );
     }
 
-    function testFail_basic_sanity() public {
-        assertTrue(false);
+    function testInitialization() public {
+        assertEq(book.HIDDEN_SCROLLS, scroll);
+        assertEq(book.MASONS, masons);
+        assertEq(book.page, 0);
     }
 
-    function test_basic_sanity() public {
-        assertTrue(true);
-    }
+
 }

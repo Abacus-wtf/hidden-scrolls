@@ -3,13 +3,13 @@ pragma solidity ^0.8.6;
 
 import "ds-test/test.sol";
 
-import "../Lords.sol";
+import {Masons} from "../Masons.sol";
 
-contract LordsTest is DSTest {
-    Lords lords;
+contract MasonsTest is DSTest {
+    Masons masons;
 
     function setUp() public {
-        lords = new Lords();
+        masons = new Masons();
     }
 
     function testFail_basic_sanity() public {
