@@ -3,6 +3,7 @@ pragma solidity ^0.8.6;
 
 import "ds-test/test.sol";
 
+import {Auth, Authority} from "solmate/auth/Auth.sol";
 import {FolkloreBook} from "../FolkloreBook.sol";
 import {HiddenScroll} from "../HiddenScroll.sol";
 import {Masons} from "../Masons.sol";
@@ -26,9 +27,21 @@ contract FolkloreBookTest is DSTest {
     }
 
     function testInitialization() public {
-        assertEq(book.HIDDEN_SCROLLS, scroll);
-        assertEq(book.MASONS, masons);
-        assertEq(book.page, 0);
+        assertEq(address(book.HIDDEN_SCROLLS()), address(scroll));
+        assertEq(address(book.MASONS()), address(masons));
+        assertEq(book.page(), 0);
+    }
+
+    function testSubmitLore(string memory _metadata, bool _nsfw) public {
+        book.submitLore(_metadata, _nsfw);
+
+        FolkloreBook.Lore memory newLore = FolkloreBook.Lore(address(this), _nsfw, false, _metadata);
+        
+        (address creator, bool nsfw, bool included, string memory metadata) = book.loreStore(0);
+        assertEq(creator, address(this));
+        assertEq(nsfw, _nsfw);
+        assertEq(included, false);
+        assertEq(metadata, _metadata);
     }
 
 

@@ -27,15 +27,16 @@ pragma solidity >=0.8.10;
 /////////////////////////////////////////////////////////////////*/
 
 /// Note: Waiting for solmate ERC721 impl
-import {ERC721} from "zeppelin-solidity/token/ERC721/ERC721.sol";
+import {ERC721URIStorage, ERC721} from "zeppelin-solidity/token/ERC721/extensions/ERC721URIStorage.sol";
 
+import {Base64} from "./utils/Base64.sol";
 import {MintAuthority} from "./MintAuthority.sol";
 
 /// @title HiddenScroll
 /// @author abigger87
 /// @dev This contract is a folklore instance deployed by the [FolkloreBook](./FolkloreBook.sol) contract.
 /// @dev ASCII Text generated with https://patorjk.com/software/taag/#p=display&f=Delta%20Corps%20Priest%201&t=Scroll
-contract HiddenScroll is ERC721("Hidden Scroll", "aSCROLL"), MintAuthority {
+contract HiddenScroll is ERC721URIStorage, MintAuthority {
 
   /// @notice The current token ID
   uint256 internal currTokenId;
@@ -52,8 +53,7 @@ contract HiddenScroll is ERC721("Hidden Scroll", "aSCROLL"), MintAuthority {
 
   constructor(
     address _mintAuthority
-  ) {
-    OWNER = msg.sender;
+  ) ERC721("Hidden Scroll", "aSCROLL") {
     mintAuthority = _mintAuthority;
   }
 
@@ -79,7 +79,6 @@ contract HiddenScroll is ERC721("Hidden Scroll", "aSCROLL"), MintAuthority {
   /// @param lore The text to write to the scroll
   function mint(address book, string memory lore) external onlyMintAuthority {
       uint256 newItemId = currTokenId;
-      string memory newItemString = Strings.toString(newItemId);
 
       string memory finalSvg = string(
           abi.encodePacked(

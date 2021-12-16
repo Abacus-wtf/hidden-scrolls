@@ -9,7 +9,7 @@ contract HiddenScrollTest is DSTest {
     HiddenScroll scrolls;
 
     function setUp() public {
-        scrolls = new HiddenScroll();
+        scrolls = new HiddenScroll(address(this));
     }
 
     function testFail_basic_sanity() public {

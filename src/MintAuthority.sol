@@ -13,6 +13,9 @@ abstract contract MintAuthority {
   /// @dev The contract owner who can change the MINT_AUTHORITY
   address internal immutable OWNER;
 
+  constructor() {
+    OWNER = msg.sender;
+  }
   /// @notice Sets the MINT_AUTHORITY
   /// @param newMintAuthority The address of the new mint authority
   function set_mint_authority(address newMintAuthority) external onlyOwner {

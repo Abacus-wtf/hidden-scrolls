@@ -9,7 +9,7 @@ contract MasonsTest is DSTest {
     Masons masons;
 
     function setUp() public {
-        masons = new Masons();
+        masons = new Masons(address(this));
     }
 
     function testFail_basic_sanity() public {

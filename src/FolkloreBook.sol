@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity >=0.8.10;
 
-import {Auth} from "solmate/Auth.sol";
+import {Auth, Authority} from "solmate/auth/Auth.sol";
 import {Bytes32AddressLib} from "solmate/utils/Bytes32AddressLib.sol";
 
 import {HiddenScroll} from "./HiddenScroll.sol";
@@ -54,7 +54,7 @@ contract FolkloreBook is Auth {
         address creator; // The Creator of the lore
         bool nsfw; // NSFW Flag
         bool included; // Was the Lore included in the book
-        string loreMetadataURI; // The encoded metadata uri
+        string metadata; // The encoded metadata uri
     }
 
     /// @notice Status of the contract
@@ -65,7 +65,7 @@ contract FolkloreBook is Auth {
     /// @dev A lore vote requires the user to be an appraisooor
     /// @dev Eventually, we can require appraisooor | ABC hodler
     /// @dev Maps pricing session version to PricingSession
-    mapping(uint256 => PricingSession) public pricingSessions;
+    // mapping(uint256 => PricingSession) public pricingSessions;
 
     /// @notice The current lore book page number
     uint256 public page;
@@ -123,14 +123,13 @@ contract FolkloreBook is Auth {
     event NewFolklore(address indexed sender, uint256 indexed loreId);
 
     /// @notice Submits new lore for the current session
-    function submitLore(string metadata, bool nsfw) external {
-        // TODO: make sure the session is active (it will always be - we immediately roll over)
+    function submitLore(string memory metadata, bool nsfw) external {
+        weigh();
 
         uint256 currentLore = loreCount;
         loreCount += 1;
         sessionLoreCount += 1;
 
-        // Create the new lore
         loreStore[currentLore] = Lore(msg.sender, nsfw, false, metadata);
 
         emit NewFolklore(msg.sender, currentLore);
@@ -180,7 +179,7 @@ contract FolkloreBook is Auth {
         if(block.timestamp > sessionEnd) {
             uint256 winningLore = loreSession[page+1][0];
             for(uint256 i = 1; i <= sessionLoreCount; i++) {
-                if votes[loreSession[page+1][i]] > votes[winningLore] {
+                if(votes[loreSession[page+1][i]] > votes[winningLore]) {
                     winningLore = loreSession[page+1][i];
                 }
             }
@@ -255,7 +254,7 @@ contract FolkloreBook is Auth {
         _;
     }
 
-    modifier uniqueVote() {
+    modifier uniqueVote {
         require(!(userVote[page+1][msg.sender] > 0), "ALREADY_VOTED");
         _;
     }
