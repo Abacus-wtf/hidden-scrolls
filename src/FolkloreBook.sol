@@ -14,11 +14,11 @@ import {Masons} from "./Masons.sol";
   ███    ███ ███    ███ ███         ███ ▄███▀ ███       ███    ███   ███    ███   ███    ███ 
   ███    █▀  ███    ███ ███         ███▐██▀   ███       ███    ███   ███    ███   ███    █▀  
  ▄███▄▄▄     ███    ███ ███        ▄█████▀    ███       ███    ███  ▄███▄▄▄▄██▀  ▄███▄▄▄     
-▀▀███▀▀▀     ███    ███ ███       ▀▀█████▄    ███       ███    ███ ▀▀███▀▀▀▀▀   ▀▀███▀▀▀     
-  ███        ███    ███ ███         ███▐██▄   ███       ███    ███ ▀███████████   ███    █▄  
-  ███        ███    ███ ███▌    ▄   ███ ▀███▄ ███▌    ▄ ███    ███   ███    ███   ███    ███ 
-  ███         ▀██████▀  █████▄▄██   ███   ▀█▀ █████▄▄██  ▀██████▀    ███    ███   ██████████ 
-                        ▀           ▀         ▀                      ███    ███              
+▀▀███▀▀▀     ███    ███ ███       ▀▀█████▄    ███       ███    ███  ▀███▀▀▀███▀  ▀▀███▀▀▀     
+  ███        ███    ███ ███         ███▐██▄   ███       ███    ███   ███    ███    ███    █▄  
+  ███        ███    ███ ███▌    ▄   ███ ▀███▄ ███▌    ▄ ███    ███   ███     ███   ███    ███ 
+  ███         ▀██████▀  █████▄▄██   ███   ▀█▀ █████▄▄██  ▀██████▀    ███      ███  ██████████ 
+                        ▀           ▀         ▀
 
                       ▀█████████▄   ▄██████▄   ▄██████▄     ▄█   ▄█▄ 
                         ███    ███ ███    ███ ███    ███   ███ ▄███▀ 
@@ -100,12 +100,14 @@ contract FolkloreBook is Auth {
     /// @dev will be 0 if they haven't voted
     mapping(uint256 => mapping(address => uint256)) userVote;
 
-    /// @notice Creates a Folklore Book.
-    /// @param _owner The owner of the book.
-    /// @param _authority The Book Authority.
+    /// @notice Creates a Folklore Book
+    /// @param _sessionLength The length each lore session runs
+    /// @param _owner The owner of the book
+    /// @param _authority The Book Authority
     /// @param _HIDDEN_SCROLLS The HiddenScrolls contract address
     /// @param _MASONS The Masons contract address
     constructor(
+        uint256 _sessionLength,
         address _owner,
         Authority _authority,
         address _HIDDEN_SCROLLS,
@@ -116,6 +118,9 @@ contract FolkloreBook is Auth {
 
         // Initialize loreCount to 1 since we leave 0 empty
         loreCount = 1;
+
+        sessionLength = _sessionLength;
+        sessionEnd = block.timestamp + sessionLength;
     }
 
     /// @notice Emitted when new Folklore is submitted
@@ -128,9 +133,11 @@ contract FolkloreBook is Auth {
 
         uint256 currentLore = loreCount;
         loreCount += 1;
-        sessionLoreCount += 1;
 
         loreStore[currentLore] = Lore(msg.sender, nsfw, false, metadata);
+
+        loreSession[page+1][sessionLoreCount] = currentLore;
+        sessionLoreCount += 1;
 
         emit NewFolklore(msg.sender, currentLore);
     }
@@ -206,7 +213,7 @@ contract FolkloreBook is Auth {
     /// @notice Gets the Lore Ids for 
     /// @param session The session number
     function getLoreIds(uint256 session) external view validSession(session) returns(uint256[] memory ids) {
-        for(uint256 i = 0; i < sessionLoreCount; i++) {
+        for(uint256 i = 1; i < sessionLoreCount; i++) {
             ids[i] = loreSession[session][i];
         }
     }
@@ -237,7 +244,7 @@ contract FolkloreBook is Auth {
 
     /// @notice Sets the session length
     /// @param newSessionLength The new session length
-    function setSessionStatus(uint256 newSessionLength) external requiresAuth {
+    function setSessionLength(uint256 newSessionLength) external requiresAuth {
         sessionLength = newSessionLength;
         emit SessionLengthUpdated(msg.sender, sessionLength);
     }
@@ -248,7 +255,7 @@ contract FolkloreBook is Auth {
 
     modifier inSessionBounds(uint256 id) {
         uint256 lower_bounds = loreSession[page+1][0];
-        uint256 upper_bounds = loreSession[page+1][sessionLoreCount];
+        uint256 upper_bounds = loreSession[page+1][sessionLoreCount-1];
         require(id >= lower_bounds, "INVALID_ID");
         require(id <= upper_bounds, "INVALID_ID");
         _;
